@@ -1,0 +1,41 @@
+{
+  "agents": {
+    "product_search": {
+      "api_keys": {
+        "ebay": "",
+        "amazon_access_key": "",
+        "amazon_secret_key": "",
+        "amazon_associate_tag": ""
+      },
+      "timeout": 10,
+      "use_amazon_mock": true,
+      "amazon_region": "us-east-1",
+      "amazon_host": "webservices.amazon.com"
+    },
+    "price_comparison": {
+      "api_keys": {
+        "google_api_key": "",
+        "priceapi": ""
+      },
+      "timeout": 10,
+      "use_google_shopping": false,
+      "use_priceapi": false,
+      "google_cx": ""
+    },
+    "review_analysis": {
+      "huggingface_api_key": "",
+      "huggingface_api_url": "https://api-inference.huggingface.co/models/cardiffnlp/twitter-roberta-base-sentiment-latest",
+      "timeout": 30
+    },
+    "recommendation_engine": {
+      "weights": {
+        "price": 0.3,
+        "sentiment": 0.4,
+        "rating": 0.2,
+        "review_count": 0.1
+      },
+      "budget_weight": 0.5
+    }
+  }
+}
+
