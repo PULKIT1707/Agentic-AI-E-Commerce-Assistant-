@@ -143,12 +143,12 @@ def print_sample_products(sample_products, categories):
     print("="*60)
     
     if categories:
-        print("\n📁 Available Categories:")
+        print("\nAvailable Categories:")
         for i, category in enumerate(categories, 1):
             print(f"   {i}. {category.title()}")
     
     if sample_products:
-        print(f"\n Sample Products ({len(sample_products)} available):")
+        print(f"\nSample Products ({len(sample_products)} available):")
         # Show all products, but group them for better readability
         for i, product in enumerate(sample_products, 1):
             category_str = f" ({product['category']})" if product.get('category') else ""
@@ -156,8 +156,8 @@ def print_sample_products(sample_products, categories):
             retailer_str = f"[{product['retailer']}]" if product.get('retailer') else ""
             print(f"   {i:2d}. {product['name']}{category_str} - {price_str} {retailer_str}")
     
-    print(f"\n Tip: You can search by product name, category, or any keyword")
-    print(f" Total: {len(sample_products)} products available across {len(categories)} categories")
+    print(f"\nTip: You can search by product name, category, or any keyword")
+    print(f"Total: {len(sample_products)} products available across {len(categories)} categories")
     print("="*60)
 
 def print_products(products, max_display=10):
@@ -254,7 +254,7 @@ def main():
             print_sample_products(sample_products, categories)
         except Exception as e:
             logging.debug(f"Could not load sample products: {e}")
-            print("\n💡 Tip: You can search for products like 'laptop', 'phone', 'headphones', etc.")
+            print("\nTip: You can search for products like 'laptop', 'phone', 'headphones', etc.")
         
         print()
         search_term = input("Enter search term: ").strip()

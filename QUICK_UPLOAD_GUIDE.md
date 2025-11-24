@@ -1,6 +1,6 @@
 # Quick Upload Guide to GitHub
 
-## Current Status ✅
+## Current Status 
 - Git repository initialized
 - All files committed (24 files, 4776 lines)
 - Branch: `main`
@@ -44,9 +44,9 @@ git push -u origin main
 - Confirm README displays correctly
 
 ## What's Included
-- ✅ All 4 agents + Workflow Manager
-- ✅ Complete test suite
-- ✅ Full documentation
-- ✅ API setup guides
-- ✅ Configuration files (safe - empty API keys)
+-  All 4 agents + Workflow Manager
+-  Complete test suite
+-  Full documentation
+-  API setup guides
+-  Configuration files (safe - empty API keys)
 

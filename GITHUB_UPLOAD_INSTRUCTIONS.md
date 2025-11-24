@@ -8,9 +8,9 @@
    - **Description**: "Agentic AI E-Commerce Assistant - Product search, price comparison, review analysis, and recommendation system"
    - **Visibility**: Choose Public or Private
    - **IMPORTANT**: Do NOT check any of these boxes:
-     - ❌ Add a README file
-     - ❌ Add .gitignore
-     - ❌ Choose a license
+     -  Add a README file
+     -  Add .gitignore
+     -  Choose a license
    - (We already have these files in the repository)
 3. Click **"Create repository"**
 
