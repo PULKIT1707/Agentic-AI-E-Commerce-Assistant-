@@ -12,7 +12,7 @@ python run_agent.py
 Then follow the prompts:
 - Enter search term (e.g., "wireless headphones")
 - Enter max results (default: 5)
-- Enter platforms (ebay,amazon or 'all' for both)
+- Enter platforms (fakestore,dummyjson,ebay,amazon or 'all' for all)
 - Enter min/max price (optional)
 
 ### Option 2: Command-Line Mode
@@ -24,7 +24,7 @@ python run_agent.py "wireless headphones"
 
 With options:
 ```bash
-python run_agent.py "laptop" --max-results 10 --platforms ebay,amazon --min-price 300 --max-price 1000
+python run_agent.py "laptop" --max-results 10 --platforms fakestore,dummyjson --min-price 10 --max-price 100
 ```
 
 ## Examples
@@ -52,22 +52,22 @@ python run_agent.py "tablet" --platforms amazon
 ## Command-Line Options
 
 - `--max-results N`: Maximum number of results (default: 5)
-- `--platforms PLATFORMS`: Comma-separated platforms (ebay,amazon)
+- `--platforms PLATFORMS`: Comma-separated platforms (fakestore,dummyjson,ebay,amazon)
 - `--min-price N`: Minimum price filter
 - `--max-price N`: Maximum price filter
 
 ## Examples Output
 
 ```
-🔍 Searching for: 'wireless headphones'
-📦 Max results: 5
-🛒 Platforms: ebay, amazon
+Searching for: 'wireless headphones'
+Max results: 5
+Platforms: ebay, amazon
 
 ============================================================
 
-✅ Search Status: Success
-📊 Total Results: 5
-🛒 Platforms Searched: amazon
+Search Status: Success
+Total Results: 5
+Platforms Searched: amazon
 
    Found 5 products:
 
@@ -103,7 +103,7 @@ async def main():
     result = await agent.execute({
         "search_term": "wireless headphones",
         "max_results": 5,
-        "platforms": ["ebay", "amazon"],
+        "platforms": ["fakestore", "dummyjson"],
         "filters": {
             "min_price": 20,
             "max_price": 100
@@ -125,7 +125,7 @@ asyncio.run(main())
 - The config.json file should be in the same directory
 
 ### "No products found"
-- Check that platforms are correct (ebay, amazon)
+- Check that platforms are correct (fakestore, dummyjson, ebay, amazon)
 - Try different search terms
 - Check API keys if using real APIs
 

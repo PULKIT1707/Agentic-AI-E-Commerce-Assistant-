@@ -26,7 +26,7 @@ async def test_full_workflow():
         with open('config.json', 'r') as f:
             config = json.load(f)
     except FileNotFoundError:
-        print("⚠️  config.json not found. Using default configuration.")
+        print("Warning: config.json not found. Using default configuration.")
         config = {}
     
     # Initialize all agents
@@ -48,9 +48,9 @@ async def test_full_workflow():
     }
     
     print("\n" + "="*60)
-    print("🛍️  Complete Recommendation Workflow Test")
+    print("Complete Recommendation Workflow Test")
     print("="*60)
-    print(f"\n👤 User Preferences:")
+    print(f"\nUser Preferences:")
     print(f"   Budget: ${user_preferences['budget']:.2f}")
     print(f"   Min Rating: {user_preferences['min_rating']}/5.0")
     
@@ -69,11 +69,11 @@ async def test_full_workflow():
     })
     
     if not search_result.get("success") or not search_result.get("products"):
-        print("❌ Product search failed or no products found")
+        print("Product search failed or no products found")
         return
     
     products = search_result["products"]
-    print(f"✅ Found {len(products)} products")
+    print(f"Found {len(products)} products")
     
     # Step 2: Compare prices
     print("\n" + "-"*60)
@@ -92,7 +92,7 @@ async def test_full_workflow():
             product_id = comp.get("product_id", "")
             if product_id:
                 price_comparisons[product_id] = comp
-        print(f"✅ Compared prices across {len(price_comparisons)} retailers")
+        print(f"Compared prices across {len(price_comparisons)} retailers")
     
     # Step 3: Analyze reviews
     print("\n" + "-"*60)
@@ -145,7 +145,7 @@ async def test_full_workflow():
         if review_result.get("success"):
             review_analyses[product_id] = review_result
     
-    print(f"✅ Analyzed reviews for {len(review_analyses)} products")
+    print(f"Analyzed reviews for {len(review_analyses)} products")
     
     # Step 4: Generate recommendations
     print("\n" + "-"*60)
@@ -164,21 +164,21 @@ async def test_full_workflow():
         summary = recommendation_result.get("summary", {})
         recommendations = recommendation_result.get("recommendations", [])
         
-        print(f"\n✅ Generated {summary.get('total_recommendations', 0)} recommendations")
-        print(f"📊 Average Score: {summary.get('average_score', 0):.3f}")
+        print(f"\nGenerated {summary.get('total_recommendations', 0)} recommendations")
+        print(f"Average Score: {summary.get('average_score', 0):.3f}")
         
         if "price_range" in summary:
             price_range = summary["price_range"]
-            print(f"💰 Price Range: ${price_range['min']:.2f} - ${price_range['max']:.2f}")
+            print(f"Price Range: ${price_range['min']:.2f} - ${price_range['max']:.2f}")
         
         if "top_recommendation" in summary:
             top = summary["top_recommendation"]
-            print(f"\n⭐ Top Recommendation:")
+            print(f"\nTop Recommendation:")
             print(f"   Product: {top.get('name', 'N/A')}")
             print(f"   Score: {top.get('score', 0):.3f}")
             print(f"   Reason: {top.get('reason', 'N/A')}")
         
-        print(f"\n📋 All Recommendations:")
+        print(f"\nAll Recommendations:")
         print("="*60)
         for i, rec in enumerate(recommendations, 1):
             product = rec.get("product", {})
@@ -190,18 +190,18 @@ async def test_full_workflow():
             print(f"   Reason: {rec.get('reason', 'N/A')}")
             
             if price_data := rec.get("price_data"):
-                print(f"   💰 Best Price: ${price_data.get('total_cost', 0):.2f}")
+                print(f"   Best Price: ${price_data.get('total_cost', 0):.2f}")
             
             if review_data := rec.get("review_data"):
                 sentiment_summary = review_data.get("sentiment_summary", {})
                 overall = sentiment_summary.get("overall_sentiment", "N/A")
-                print(f"   💬 Reviews: {overall} sentiment")
+                print(f"   Reviews: {overall} sentiment")
     else:
-        print(f"\n❌ Recommendation generation failed: {recommendation_result.get('error')}")
+        print(f"\nRecommendation generation failed: {recommendation_result.get('error')}")
 
 if __name__ == "__main__":
-    print("🚀 Testing Recommendation Engine Agent\n")
-    print("ℹ️  This test runs the complete workflow:\n")
+    print("Testing Recommendation Engine Agent\n")
+    print("Note: This test runs the complete workflow:\n")
     print("   1. Search products")
     print("   2. Compare prices")
     print("   3. Analyze reviews")

@@ -44,6 +44,389 @@ class ProductSearchAgent(BaseAgent):
         self.amazon_host = self.config.get("amazon_host", "webservices.amazon.com")
         self.use_amazon_mock = self.config.get("use_amazon_mock", True)
         
+    async def _search_fakestore(self, query: str, max_results: int = 5, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        """
+        Search products using FakeStore API.
+        
+        Args:
+            query: Search query string (used for filtering results)
+            max_results: Maximum number of results to return
+            filters: Optional filters (price range, etc.)
+            
+        Returns:
+            List of product dictionaries
+        """
+        try:
+            url = "https://fakestoreapi.com/products"
+            
+            # Disable SSL verification for development (fixes certificate errors)
+            connector = aiohttp.TCPConnector(ssl=False)
+            async with aiohttp.ClientSession(connector=connector) as session:
+                async with session.get(
+                    url,
+                    timeout=aiohttp.ClientTimeout(total=self.timeout)
+                ) as response:
+                    if response.status == 200:
+                        products_data = await response.json()
+                        return self._parse_fakestore_response(products_data, query, max_results, filters)
+                    else:
+                        error_text = await response.text()
+                        self.logger.error(f"FakeStore API error: {response.status} - {error_text}")
+                        # Fallback to mock if API fails
+                        return await self._search_fakestore_mock(query, max_results, filters)
+                        
+        except asyncio.TimeoutError:
+            self.logger.error("FakeStore API timeout, using fallback")
+            return await self._search_fakestore_mock(query, max_results, filters)
+        except Exception as e:
+            self.logger.error(f"Error calling FakeStore API: {e}, using fallback")
+            return await self._search_fakestore_mock(query, max_results, filters)
+    
+    def _parse_fakestore_response(self, products_data: List[Dict[str, Any]], query: str, max_results: int, filters: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Parse FakeStore API response into product dictionaries.
+        
+        Args:
+            products_data: JSON response from FakeStore API
+            query: Search query for filtering
+            max_results: Maximum number of results
+            filters: Optional price filters
+            
+        Returns:
+            List of product dictionaries
+        """
+        products = []
+        query_lower = query.lower()
+        
+        try:
+            for item in products_data:
+                # Filter by query term if provided
+                title = item.get("title", "").lower()
+                description = item.get("description", "").lower()
+                category = item.get("category", "").lower()
+                
+                if query and query_lower not in title and query_lower not in description and query_lower not in category:
+                    continue
+                
+                # Extract price
+                price = float(item.get("price", 0))
+                
+                # Apply price filters if provided
+                if filters:
+                    if "min_price" in filters and price < filters["min_price"]:
+                        continue
+                    if "max_price" in filters and price > filters["max_price"]:
+                        continue
+                
+                # Extract rating
+                rating_obj = item.get("rating", {})
+                rating = rating_obj.get("rate") if isinstance(rating_obj, dict) else None
+                review_count = rating_obj.get("count") if isinstance(rating_obj, dict) else None
+                
+                product = {
+                    "product_id": str(item.get("id", "")),
+                    "name": item.get("title", "Unknown Product"),
+                    "price": round(price, 2),
+                    "shipping_cost": 0.0,  # FakeStore doesn't provide shipping info
+                    "total_price": round(price, 2),
+                    "currency": "USD",
+                    "retailer": "FakeStore",
+                    "url": f"https://fakestoreapi.com/products/{item.get('id', '')}",
+                    "image_url": item.get("image", ""),
+                    "condition": "New",
+                    "rating": round(rating, 1) if rating else None,
+                    "review_count": review_count,
+                    "category": item.get("category", ""),
+                    "description": item.get("description", "")
+                }
+                
+                products.append(product)
+                
+                if len(products) >= max_results:
+                    break
+                    
+        except Exception as e:
+            self.logger.error(f"Error parsing FakeStore response: {e}")
+        
+        return products
+    
+    def _get_fallback_products(self) -> List[Dict[str, Any]]:
+        """Return comprehensive fallback product database."""
+        return [
+            {"name": "Wireless Bluetooth Headphones", "category": "electronics", "price": 79.99, "retailer": "FakeStore"},
+            {"name": "Smartphone 128GB", "category": "electronics", "price": 599.99, "retailer": "DummyJSON"},
+            {"name": "Laptop 15.6 inch", "category": "electronics", "price": 899.99, "retailer": "FakeStore"},
+            {"name": "Wireless Mouse", "category": "electronics", "price": 29.99, "retailer": "DummyJSON"},
+            {"name": "Mechanical Keyboard", "category": "electronics", "price": 129.99, "retailer": "FakeStore"},
+            {"name": "4K Monitor 27 inch", "category": "electronics", "price": 349.99, "retailer": "DummyJSON"},
+            {"name": "USB-C Hub", "category": "electronics", "price": 49.99, "retailer": "FakeStore"},
+            {"name": "Webcam HD 1080p", "category": "electronics", "price": 69.99, "retailer": "DummyJSON"},
+            {"name": "Tablet 10 inch", "category": "electronics", "price": 299.99, "retailer": "FakeStore"},
+            {"name": "Smart Watch", "category": "electronics", "price": 199.99, "retailer": "DummyJSON"},
+            {"name": "Gaming Chair", "category": "furniture", "price": 249.99, "retailer": "FakeStore"},
+            {"name": "Standing Desk", "category": "furniture", "price": 399.99, "retailer": "DummyJSON"},
+            {"name": "Office Chair Ergonomic", "category": "furniture", "price": 179.99, "retailer": "FakeStore"},
+            {"name": "Desk Lamp LED", "category": "furniture", "price": 39.99, "retailer": "DummyJSON"},
+            {"name": "Bookshelf 5 Tier", "category": "furniture", "price": 89.99, "retailer": "FakeStore"},
+            {"name": "Coffee Table Glass", "category": "furniture", "price": 149.99, "retailer": "DummyJSON"},
+            {"name": "Sofa 3 Seater", "category": "furniture", "price": 599.99, "retailer": "FakeStore"},
+            {"name": "Dining Table Set", "category": "furniture", "price": 449.99, "retailer": "DummyJSON"},
+            {"name": "Bed Frame Queen", "category": "furniture", "price": 299.99, "retailer": "FakeStore"},
+            {"name": "Wardrobe 4 Door", "category": "furniture", "price": 399.99, "retailer": "DummyJSON"},
+            {"name": "Cotton T-Shirt", "category": "clothing", "price": 19.99, "retailer": "FakeStore"},
+            {"name": "Denim Jeans", "category": "clothing", "price": 49.99, "retailer": "DummyJSON"},
+            {"name": "Hoodie Pullover", "category": "clothing", "price": 39.99, "retailer": "FakeStore"},
+            {"name": "Running Shoes", "category": "clothing", "price": 89.99, "retailer": "DummyJSON"},
+            {"name": "Winter Jacket", "category": "clothing", "price": 129.99, "retailer": "FakeStore"},
+            {"name": "Sunglasses Aviator", "category": "clothing", "price": 59.99, "retailer": "DummyJSON"},
+            {"name": "Backpack Laptop", "category": "clothing", "price": 69.99, "retailer": "FakeStore"},
+            {"name": "Leather Belt", "category": "clothing", "price": 29.99, "retailer": "DummyJSON"},
+            {"name": "Baseball Cap", "category": "clothing", "price": 24.99, "retailer": "FakeStore"},
+            {"name": "Wristwatch Classic", "category": "clothing", "price": 149.99, "retailer": "DummyJSON"},
+            {"name": "Coffee Maker", "category": "home", "price": 79.99, "retailer": "FakeStore"},
+            {"name": "Air Fryer 5QT", "category": "home", "price": 99.99, "retailer": "DummyJSON"},
+            {"name": "Blender Professional", "category": "home", "price": 129.99, "retailer": "FakeStore"},
+            {"name": "Microwave Oven", "category": "home", "price": 149.99, "retailer": "DummyJSON"},
+            {"name": "Toaster 4 Slice", "category": "home", "price": 49.99, "retailer": "FakeStore"},
+            {"name": "Rice Cooker", "category": "home", "price": 59.99, "retailer": "DummyJSON"},
+            {"name": "Vacuum Cleaner", "category": "home", "price": 199.99, "retailer": "FakeStore"},
+            {"name": "Robot Vacuum", "category": "home", "price": 299.99, "retailer": "DummyJSON"},
+            {"name": "Air Purifier HEPA", "category": "home", "price": 179.99, "retailer": "FakeStore"},
+            {"name": "Humidifier Ultrasonic", "category": "home", "price": 69.99, "retailer": "DummyJSON"},
+            {"name": "Action Camera 4K", "category": "electronics", "price": 199.99, "retailer": "FakeStore"},
+            {"name": "Drone with Camera", "category": "electronics", "price": 449.99, "retailer": "DummyJSON"},
+            {"name": "Security Camera System", "category": "electronics", "price": 249.99, "retailer": "FakeStore"},
+            {"name": "Digital Camera DSLR", "category": "electronics", "price": 699.99, "retailer": "DummyJSON"},
+            {"name": "Instant Camera Polaroid", "category": "electronics", "price": 129.99, "retailer": "FakeStore"},
+            {"name": "Camera Lens 50mm", "category": "electronics", "price": 299.99, "retailer": "DummyJSON"},
+            {"name": "Portable Speaker", "category": "electronics", "price": 79.99, "retailer": "FakeStore"},
+            {"name": "Earbuds Wireless", "category": "electronics", "price": 99.99, "retailer": "DummyJSON"},
+            {"name": "Power Bank 20000mAh", "category": "electronics", "price": 39.99, "retailer": "FakeStore"},
+            {"name": "Phone Case Protective", "category": "electronics", "price": 19.99, "retailer": "DummyJSON"},
+            {"name": "Screen Protector Glass", "category": "electronics", "price": 14.99, "retailer": "FakeStore"},
+            {"name": "Laptop Stand Aluminum", "category": "electronics", "price": 49.99, "retailer": "DummyJSON"},
+            {"name": "External Hard Drive 2TB", "category": "electronics", "price": 89.99, "retailer": "FakeStore"},
+            {"name": "USB Flash Drive 128GB", "category": "electronics", "price": 24.99, "retailer": "DummyJSON"},
+            {"name": "Yoga Mat Premium", "category": "sports", "price": 34.99, "retailer": "FakeStore"},
+            {"name": "Dumbbells Set 20kg", "category": "sports", "price": 79.99, "retailer": "DummyJSON"},
+            {"name": "Bicycle Helmet", "category": "sports", "price": 49.99, "retailer": "FakeStore"},
+            {"name": "Tennis Racket", "category": "sports", "price": 89.99, "retailer": "DummyJSON"},
+            {"name": "Basketball Official", "category": "sports", "price": 29.99, "retailer": "FakeStore"},
+            {"name": "Fitness Tracker", "category": "sports", "price": 59.99, "retailer": "DummyJSON"},
+            {"name": "Resistance Bands Set", "category": "sports", "price": 24.99, "retailer": "FakeStore"},
+            {"name": "Jump Rope", "category": "sports", "price": 14.99, "retailer": "DummyJSON"},
+            {"name": "Water Bottle Insulated", "category": "sports", "price": 29.99, "retailer": "FakeStore"},
+            {"name": "Gym Bag Large", "category": "sports", "price": 39.99, "retailer": "DummyJSON"},
+            {"name": "Protein Shaker Bottle", "category": "sports", "price": 19.99, "retailer": "FakeStore"},
+        ]
+    
+    async def _search_fakestore_mock(self, query: str, max_results: int = 5, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        """Fallback mock search for FakeStore when API fails."""
+        await asyncio.sleep(0.3)  # Simulate API delay
+        
+        query_lower = query.lower()
+        all_products = self._get_fallback_products()
+        matching_products = []
+        
+        for product in all_products:
+            # Filter by retailer
+            if product["retailer"] != "FakeStore":
+                continue
+            
+            # Search in name and category
+            name_match = query_lower in product["name"].lower()
+            category_match = query_lower in product.get("category", "").lower()
+            
+            if not (name_match or category_match):
+                continue
+            
+            # Apply price filters
+            price = product["price"]
+            if filters:
+                if "min_price" in filters and price < filters["min_price"]:
+                    continue
+                if "max_price" in filters and price > filters["max_price"]:
+                    continue
+            
+            # Convert to product format
+            product_id = f"FS-MOCK-{len(matching_products) + 1}"
+            matching_products.append({
+                "product_id": product_id,
+                "name": product["name"],
+                "price": round(price, 2),
+                "shipping_cost": 0.0,
+                "total_price": round(price, 2),
+                "currency": "USD",
+                "retailer": "FakeStore",
+                "url": f"https://fakestoreapi.com/products/{product_id}",
+                "image_url": "",
+                "condition": "New",
+                "rating": round(4.0 + (len(matching_products) % 3) * 0.3, 1),
+                "review_count": (len(matching_products) + 1) * 50,
+                "category": product.get("category", ""),
+                "description": f"{product['name']} - Available from FakeStore"
+            })
+            
+            if len(matching_products) >= max_results:
+                break
+        
+        return matching_products
+    
+    async def _search_dummyjson_mock(self, query: str, max_results: int = 5, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        """Fallback mock search for DummyJSON when API fails."""
+        await asyncio.sleep(0.3)  # Simulate API delay
+        
+        query_lower = query.lower()
+        all_products = self._get_fallback_products()
+        matching_products = []
+        
+        for product in all_products:
+            # Filter by retailer
+            if product["retailer"] != "DummyJSON":
+                continue
+            
+            # Search in name and category
+            name_match = query_lower in product["name"].lower()
+            category_match = query_lower in product.get("category", "").lower()
+            
+            if not (name_match or category_match):
+                continue
+            
+            # Apply price filters
+            price = product["price"]
+            if filters:
+                if "min_price" in filters and price < filters["min_price"]:
+                    continue
+                if "max_price" in filters and price > filters["max_price"]:
+                    continue
+            
+            # Convert to product format
+            product_id = f"DJ-MOCK-{len(matching_products) + 1}"
+            matching_products.append({
+                "product_id": product_id,
+                "name": product["name"],
+                "price": round(price, 2),
+                "shipping_cost": 0.0,
+                "total_price": round(price, 2),
+                "currency": "USD",
+                "retailer": "DummyJSON",
+                "url": f"https://dummyjson.com/products/{product_id}",
+                "image_url": "",
+                "condition": "New",
+                "rating": round(4.0 + (len(matching_products) % 3) * 0.3, 1),
+                "review_count": (len(matching_products) + 1) * 50,
+                "category": product.get("category", ""),
+                "description": f"{product['name']} - Available from DummyJSON"
+            })
+            
+            if len(matching_products) >= max_results:
+                break
+        
+        return matching_products
+    
+    async def _search_dummyjson(self, query: str, max_results: int = 5, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        """
+        Search products using DummyJSON API.
+        
+        Args:
+            query: Search query string
+            max_results: Maximum number of results to return
+            filters: Optional filters (price range, etc.)
+            
+        Returns:
+            List of product dictionaries
+        """
+        try:
+            # URL encode the query
+            encoded_query = urllib.parse.quote(query)
+            url = f"https://dummyjson.com/products/search?q={encoded_query}"
+            
+            # Disable SSL verification for development (fixes certificate errors)
+            connector = aiohttp.TCPConnector(ssl=False)
+            async with aiohttp.ClientSession(connector=connector) as session:
+                async with session.get(
+                    url,
+                    timeout=aiohttp.ClientTimeout(total=self.timeout)
+                ) as response:
+                    if response.status == 200:
+                        result = await response.json()
+                        return self._parse_dummyjson_response(result, max_results, filters)
+                    else:
+                        error_text = await response.text()
+                        self.logger.error(f"DummyJSON API error: {response.status} - {error_text}")
+                        # Fallback to mock if API fails
+                        return await self._search_dummyjson_mock(query, max_results, filters)
+                        
+        except asyncio.TimeoutError:
+            self.logger.error("DummyJSON API timeout, using fallback")
+            return await self._search_dummyjson_mock(query, max_results, filters)
+        except Exception as e:
+            self.logger.error(f"Error calling DummyJSON API: {e}, using fallback")
+            return await self._search_dummyjson_mock(query, max_results, filters)
+    
+    def _parse_dummyjson_response(self, response: Dict[str, Any], max_results: int, filters: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Parse DummyJSON API response into product dictionaries.
+        
+        Args:
+            response: JSON response from DummyJSON API
+            max_results: Maximum number of results
+            filters: Optional price filters
+            
+        Returns:
+            List of product dictionaries
+        """
+        products = []
+        
+        try:
+            items = response.get("products", [])
+            
+            for item in items[:max_results]:
+                # Extract price
+                price = float(item.get("price", 0))
+                
+                # Apply price filters if provided
+                if filters:
+                    if "min_price" in filters and price < filters["min_price"]:
+                        continue
+                    if "max_price" in filters and price > filters["max_price"]:
+                        continue
+                
+                # Extract discount percentage
+                discount_percentage = item.get("discountPercentage", 0)
+                discounted_price = price * (1 - discount_percentage / 100) if discount_percentage > 0 else price
+                
+                # Extract rating
+                rating = item.get("rating")
+                review_count = item.get("reviews", [])
+                review_count = len(review_count) if isinstance(review_count, list) else 0
+                
+                product = {
+                    "product_id": str(item.get("id", "")),
+                    "name": item.get("title", "Unknown Product"),
+                    "price": round(discounted_price, 2),
+                    "shipping_cost": 0.0,  # DummyJSON doesn't provide shipping info
+                    "total_price": round(discounted_price, 2),
+                    "currency": "USD",
+                    "retailer": "DummyJSON",
+                    "url": f"https://dummyjson.com/products/{item.get('id', '')}",
+                    "image_url": item.get("thumbnail", ""),
+                    "condition": "New",
+                    "rating": round(rating, 1) if rating else None,
+                    "review_count": review_count,
+                    "category": item.get("category", ""),
+                    "brand": item.get("brand", ""),
+                    "discount_percentage": round(discount_percentage, 1) if discount_percentage > 0 else None,
+                    "stock": item.get("stock", 0)
+                }
+                
+                products.append(product)
+                    
+        except Exception as e:
+            self.logger.error(f"Error parsing DummyJSON response: {e}")
+        
+        return products
+        
     async def _search_ebay(self, query: str, max_results: int = 5, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """
         Search eBay products using eBay Finding API.
@@ -491,7 +874,8 @@ class ProductSearchAgent(BaseAgent):
             query: Dictionary containing:
                 - search_term: Product name or description to search
                 - max_results: Maximum number of results per platform (default: 5)
-                - platforms: List of platforms to search (default: ["ebay", "amazon"])
+                - platforms: List of platforms to search (default: ["fakestore", "dummyjson"])
+                    Supported: "fakestore", "dummyjson", "ebay", "amazon"
                 - filters: Optional filters dictionary:
                     - min_price: Minimum price filter
                     - max_price: Maximum price filter
@@ -516,7 +900,8 @@ class ProductSearchAgent(BaseAgent):
         
         search_term = query.get("search_term")
         max_results = query.get("max_results", 5)
-        platforms = query.get("platforms", ["ebay", "amazon"])
+        # Default to new APIs that don't require authentication
+        platforms = query.get("platforms", ["fakestore", "dummyjson"])
         filters = query.get("filters", {})
         
         self.logger.info(f"Searching for '{search_term}' across {platforms}")
@@ -527,6 +912,16 @@ class ProductSearchAgent(BaseAgent):
         # Search each platform concurrently
         tasks = []
         
+        # New APIs (no authentication required)
+        if "fakestore" in platforms:
+            tasks.append(("fakestore", self._search_fakestore(search_term, max_results, filters)))
+            platforms_searched.append("fakestore")
+        
+        if "dummyjson" in platforms:
+            tasks.append(("dummyjson", self._search_dummyjson(search_term, max_results, filters)))
+            platforms_searched.append("dummyjson")
+        
+        # Optional premium APIs (require API keys)
         if "ebay" in platforms:
             tasks.append(("ebay", self._search_ebay(search_term, max_results, filters)))
             platforms_searched.append("ebay")

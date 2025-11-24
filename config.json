@@ -10,7 +10,17 @@
       "timeout": 10,
       "use_amazon_mock": true,
       "amazon_region": "us-east-1",
-      "amazon_host": "webservices.amazon.com"
+      "amazon_host": "webservices.amazon.com",
+      "default_platforms": ["fakestore", "dummyjson"],
+      "fakestore": {
+        "enabled": true,
+        "url": "https://fakestoreapi.com/products"
+      },
+      "dummyjson": {
+        "enabled": true,
+        "search_url": "https://dummyjson.com/products/search",
+        "product_url": "https://dummyjson.com/products"
+      }
     },
     "price_comparison": {
       "api_keys": {
@@ -24,8 +34,9 @@
     },
     "review_analysis": {
       "huggingface_api_key": "",
-      "huggingface_api_url": "https://api-inference.huggingface.co/models/cardiffnlp/twitter-roberta-base-sentiment-latest",
-      "timeout": 30
+      "huggingface_api_url": "https://router.huggingface.co/hf-inference/models/cardiffnlp/twitter-roberta-base-sentiment-latest",
+      "timeout": 30,
+      "fetch_reviews_from_dummyjson": true
     },
     "recommendation_engine": {
       "weights": {

@@ -37,22 +37,17 @@ pip install -r requirements.txt
 
 ## API Setup
 
-### Quick Start (Mock Data)
-The system works out of the box with mock Amazon data. No API keys needed for testing!
+### Quick Start (No Authentication Required!)
+The system works out of the box with **FakeStore** and **DummyJSON** APIs - no API keys needed! These are the default platforms.
 
-### eBay API (Free)
-See `API_SETUP_GUIDE.md` for detailed instructions:
-1. Go to [eBay Developers Program](https://developer.ebay.com/)
-2. Sign up for a free account
-3. Create a new application
-4. Get your App ID (Sandbox ID)
-5. Add it to `config.json`
+### Primary APIs (No Authentication)
+- **FakeStore API**: `https://fakestoreapi.com/products` - Free, no authentication required
+- **DummyJSON API**: `https://dummyjson.com/products/search` - Free, no authentication required
+- **DummyJSON Reviews**: `https://dummyjson.com/products/{id}` - Fetches real product reviews (numeric IDs only)
 
-### Amazon PA-API 5.0 (Requires Setup)
-See `AMAZON_PAAPI_SETUP.md` for detailed instructions:
-- Requires Amazon Associates account
-- Requires AWS IAM credentials
-- Full AWS Signature V4 implementation included
+### Optional Premium APIs
+- **eBay API (Free)**: See `API_SETUP_GUIDE.md` for detailed instructions
+- **Amazon PA-API 5.0**: See `AMAZON_PAAPI_SETUP.md` for detailed instructions (requires setup)
 
 ## Usage
 
@@ -71,11 +66,11 @@ async def main():
     # Initialize agent
     agent = ProductSearchAgent(config.get("agents", {}).get("product_search", {}))
     
-    # Search for products
+    # Search for products (default: fakestore, dummyjson)
     result = await agent.execute({
-        "search_term": "wireless headphones",
+        "search_term": "laptop",
         "max_results": 5,
-        "platforms": ["ebay", "amazon"],
+        "platforms": ["fakestore", "dummyjson"],  # No API keys needed!
         "filters": {
             "min_price": 20,
             "max_price": 100
@@ -92,13 +87,14 @@ asyncio.run(main())
 ## Features
 
 ### Product Search Agent
-- **eBay Finding API Integration**: Real product search from eBay (free, 5,000 calls/day)
-- **Amazon PA-API 5.0 Integration**: Real Amazon product search with AWS Signature V4
-- **Mock Amazon Data**: Test with mock Amazon products (default)
+- **FakeStore API Integration**: Free product search, no authentication required (default)
+- **DummyJSON API Integration**: Free product search with reviews, no authentication required (default)
+- **eBay Finding API Integration**: Real product search from eBay (optional, requires API key, 5,000 calls/day)
+- **Amazon PA-API 5.0 Integration**: Real Amazon product search with AWS Signature V4 (optional, requires setup)
 - **Price Filtering**: Filter products by price range
 - **Concurrent Searches**: Search multiple platforms simultaneously
 - **Error Handling**: Graceful error handling and logging
-- **Automatic Fallback**: Uses real APIs when available, falls back to mock data
+- **Automatic Fallback**: Uses real APIs when available, falls back gracefully
 
 ### Price Comparison Agent
 - **Multi-Retailer Comparison**: Compare prices across different retailers
@@ -110,7 +106,8 @@ asyncio.run(main())
 - **Google Shopping API**: Direct integration with Google Shopping for price comparison
 
 ### Review Analysis Agent
-- **HuggingFace API Integration**: Real sentiment analysis using state-of-the-art models
+- **Review Fetching**: Automatically fetches real reviews from DummyJSON for numeric product IDs
+- **HuggingFace API Integration**: Real sentiment analysis using state-of-the-art models (router endpoint)
 - **Sentiment Classification**: POSITIVE, NEGATIVE, NEUTRAL with confidence scores
 - **Theme Extraction**: Identifies common topics (quality, price, shipping, functionality, etc.)
 - **Batch Processing**: Analyzes multiple reviews concurrently
@@ -119,10 +116,10 @@ asyncio.run(main())
 
 ## Completed Agents
 
-✅ **Product Search API Agent** - Search products from eBay and Amazon
-✅ **Price Comparison API Agent** - Compare prices across retailers and track history
-✅ **Review Analysis Agent** - Analyze reviews with HuggingFace sentiment analysis
-✅ **Recommendation Engine Agent** - Synthesize recommendations from all agents
+**Product Search API Agent** - Search products from FakeStore, DummyJSON, eBay, and Amazon
+**Price Comparison API Agent** - Compare prices across retailers and track history
+**Review Analysis Agent** - Analyze reviews with HuggingFace sentiment analysis
+**Recommendation Engine Agent** - Synthesize recommendations from all agents
 
 ### Recommendation Engine Agent
 - **Multi-Factor Scoring**: Combines price, sentiment, rating, and review count

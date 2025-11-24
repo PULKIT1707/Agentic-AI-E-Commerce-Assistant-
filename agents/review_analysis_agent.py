@@ -25,9 +25,61 @@ class ReviewAnalysisAgent(BaseAgent):
         self.huggingface_api_key = self.config.get("huggingface_api_key", "")
         self.huggingface_api_url = self.config.get(
             "huggingface_api_url",
-            "https://api-inference.huggingface.co/models/cardiffnlp/twitter-roberta-base-sentiment-latest"
+            "https://router.huggingface.co/hf-inference/models/cardiffnlp/twitter-roberta-base-sentiment-latest"
         )
         self.timeout = self.config.get("timeout", 30)
+    
+    async def fetch_reviews(self, product_id: str) -> List[Dict[str, Any]]:
+        """
+        Fetch reviews for a product from DummyJSON API.
+        Only works for numeric product IDs (DummyJSON requirement).
+        
+        Args:
+            product_id: Product ID (must be numeric for DummyJSON)
+            
+        Returns:
+            List of review dictionaries with "text" and "rating" fields
+        """
+        # Check if product_id is numeric (DummyJSON requirement)
+        if not product_id.isdigit():
+            self.logger.warning(f"Product ID '{product_id}' is not numeric, skipping DummyJSON review fetch")
+            return []
+        
+        try:
+            url = f"https://dummyjson.com/products/{product_id}"
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    url,
+                    timeout=aiohttp.ClientTimeout(total=self.timeout)
+                ) as response:
+                    if response.status == 200:
+                        product_data = await response.json()
+                        reviews = product_data.get("reviews", [])
+                        
+                        # Convert DummyJSON reviews to our format
+                        formatted_reviews = []
+                        for review in reviews:
+                            formatted_review = {
+                                "text": review.get("review", ""),
+                                "rating": review.get("rating", 0),
+                                "reviewer": review.get("reviewer", "Anonymous")
+                            }
+                            formatted_reviews.append(formatted_review)
+                        
+                        self.logger.info(f"Fetched {len(formatted_reviews)} reviews for product {product_id}")
+                        return formatted_reviews
+                    else:
+                        error_text = await response.text()
+                        self.logger.error(f"DummyJSON API error fetching reviews: {response.status} - {error_text}")
+                        return []
+                        
+        except asyncio.TimeoutError:
+            self.logger.error("DummyJSON API timeout while fetching reviews")
+            return []
+        except Exception as e:
+            self.logger.error(f"Error fetching reviews from DummyJSON: {e}")
+            return []
         
     async def _analyze_sentiment(self, text: str) -> Dict[str, Any]:
         """

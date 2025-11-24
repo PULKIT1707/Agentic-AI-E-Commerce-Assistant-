@@ -101,7 +101,7 @@ class WorkflowManager:
             
             search_term = user_query.get("search_term")
             max_results = user_query.get("max_results", 10)
-            platforms = user_query.get("platforms", ["ebay", "amazon"])
+            platforms = user_query.get("platforms", ["fakestore", "dummyjson"])
             filters = user_query.get("filters", {})
             user_preferences = user_query.get("user_preferences", {})
             include_price_comparison = user_query.get("include_price_comparison", True)
@@ -168,10 +168,9 @@ class WorkflowManager:
             if include_review_analysis:
                 self.logger.info("Step 3: Executing Review Analysis Agent")
                 
-                # Extract reviews from products (if available)
-                # In production, reviews would come from product search results
-                # For now, we'll generate mock reviews based on product ratings
-                reviews_by_product = self._extract_reviews_from_products(products)
+                # Extract or fetch reviews from products
+                # Fetches real reviews from DummyJSON for numeric product IDs
+                reviews_by_product = await self._extract_reviews_from_products(products)
                 
                 # Analyze reviews for each product concurrently
                 review_tasks = []
@@ -251,10 +250,10 @@ class WorkflowManager:
             }
             return workflow_result
     
-    def _extract_reviews_from_products(self, products: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+    async def _extract_reviews_from_products(self, products: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
         """
-        Extract or generate reviews from products.
-        In production, reviews would come from product search results.
+        Extract or fetch reviews from products.
+        Fetches real reviews from DummyJSON for numeric product IDs, otherwise generates mock reviews.
         
         Args:
             products: List of product dictionaries
@@ -267,39 +266,66 @@ class WorkflowManager:
         for product in products:
             product_id = product.get("product_id", "")
             rating = product.get("rating", 4.0)
+            retailer = product.get("retailer", "")
             
-            # Generate mock reviews based on rating
-            # In production, these would come from the product search API
             reviews = []
-            if rating >= 4.5:
-                reviews = [
-                    {"text": "Excellent product! Highly recommend!", "rating": 5},
-                    {"text": "Great quality and fast shipping. Love it!", "rating": 5},
-                    {"text": "Amazing value for money. Very satisfied!", "rating": 5},
-                    {"text": "Perfect! Exceeded my expectations.", "rating": 5},
-                    {"text": "Good product, works as expected.", "rating": 4}
-                ]
-            elif rating >= 4.0:
-                reviews = [
-                    {"text": "Good product, worth the price.", "rating": 4},
-                    {"text": "Decent quality, works fine.", "rating": 4},
-                    {"text": "Nice product but could be better.", "rating": 3},
-                    {"text": "Satisfied with the purchase.", "rating": 4},
-                    {"text": "It's okay, nothing special.", "rating": 3}
-                ]
+            
+            # Try to fetch real reviews from DummyJSON if product ID is numeric
+            if product_id and product_id.isdigit() and retailer == "DummyJSON":
+                try:
+                    fetched_reviews = await self.review_agent.fetch_reviews(product_id)
+                    if fetched_reviews:
+                        reviews = fetched_reviews
+                        self.logger.info(f"Fetched {len(reviews)} real reviews for product {product_id}")
+                    else:
+                        # Fallback to mock if fetch failed
+                        reviews = self._generate_mock_reviews(rating)
+                except Exception as e:
+                    self.logger.warning(f"Error fetching reviews for product {product_id}: {e}, using mock reviews")
+                    reviews = self._generate_mock_reviews(rating)
             else:
-                reviews = [
-                    {"text": "Not great quality, disappointed.", "rating": 2},
-                    {"text": "Poor build quality, broke quickly.", "rating": 2},
-                    {"text": "Not worth the money.", "rating": 2},
-                    {"text": "Terrible product, avoid this.", "rating": 1},
-                    {"text": "Very disappointed with this purchase.", "rating": 2}
-                ]
+                # Generate mock reviews for non-numeric IDs or other retailers
+                reviews = self._generate_mock_reviews(rating)
             
             if product_id:
                 reviews_by_product[product_id] = reviews
         
         return reviews_by_product
+    
+    def _generate_mock_reviews(self, rating: float) -> List[Dict[str, Any]]:
+        """
+        Generate mock reviews based on product rating.
+        
+        Args:
+            rating: Product rating (0-5)
+            
+        Returns:
+            List of mock review dictionaries
+        """
+        if rating >= 4.5:
+            return [
+                {"text": "Excellent product! Highly recommend!", "rating": 5},
+                {"text": "Great quality and fast shipping. Love it!", "rating": 5},
+                {"text": "Amazing value for money. Very satisfied!", "rating": 5},
+                {"text": "Perfect! Exceeded my expectations.", "rating": 5},
+                {"text": "Good product, works as expected.", "rating": 4}
+            ]
+        elif rating >= 4.0:
+            return [
+                {"text": "Good product, worth the price.", "rating": 4},
+                {"text": "Decent quality, works fine.", "rating": 4},
+                {"text": "Nice product but could be better.", "rating": 3},
+                {"text": "Satisfied with the purchase.", "rating": 4},
+                {"text": "It's okay, nothing special.", "rating": 3}
+            ]
+        else:
+            return [
+                {"text": "Not great quality, disappointed.", "rating": 2},
+                {"text": "Poor build quality, broke quickly.", "rating": 2},
+                {"text": "Not worth the money.", "rating": 2},
+                {"text": "Terrible product, avoid this.", "rating": 1},
+                {"text": "Very disappointed with this purchase.", "rating": 2}
+            ]
     
     async def _analyze_product_reviews(
         self,
@@ -346,7 +372,7 @@ class WorkflowManager:
         query = {
             "search_term": search_term,
             "max_results": max_results,
-            "platforms": platforms or ["ebay", "amazon"],
+            "platforms": platforms or ["fakestore", "dummyjson"],
             "filters": filters or {}
         }
         return await self.search_agent.execute(query)
